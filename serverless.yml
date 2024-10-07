@@ -1,0 +1,147 @@
+service: serverless-example
+frameworkVersion: v3
+configValidationMode: error
+
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
+
+
+custom:
+  serverlessPluginTypescript:
+    tsConfigFileLocation: './tsconfig.build.json'
+  allowedHeaders:
+    - Accept
+    - Content-Type
+    - Authorization
+    - X-Amz-Date
+    - X-Api-Key
+    - X-Amz-Security-Token
+    - X-Amz-User-Agent
+    - app_user_id
+    - app_user_name
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  region: us-east-1
+  stage: dev
+  memorySize: 128
+  timeout: 2
+  environment:
+    NOTES_TABLE:  "notes"
+    COGNITO_IDENTITY_POOL_ID: "pool-id"
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action: 
+            -  'dynamodb:Query'
+            -  'dynamodb:PutItem'
+            -  'dynamodb:DeleteItem'
+            -  'dynamodb:GetItem'
+            -  'dynamodb:UpdateItem'
+          Resource: "arn:aws:dynamodb:${self.provider.region}:*:table/${self:provider.environment.NOTES_TABLE}"
+       
+    
+
+functions:
+  getNotes:
+    handler: handlers/notes.getNotes
+    events:
+      - http:
+          path: notes
+          method: GET
+  
+  addNote:
+    handler: handlers/notes.addNote
+    events:
+      - http:
+          path: notes
+          method: POST
+          cors: 
+            origins: '*'
+            headers: ${self:custom.allowedHeaders}
+  
+  getNote:
+    handler: handlers/notes.getNoteById
+    events:
+      - http:
+          path: notes/{noteId}
+          method: get
+          cors: 
+            origins: '*'
+            headers: ${self:custom.allowedHeaders}
+          request:
+            parameters:
+              paths:
+                noteId: true
+  
+  updateNote:
+    handler: handlers/notes.updateNoteById
+    events:
+      - http:
+          path: notes/{noteId}
+          method: patch
+          cors: 
+            origins: '*'
+            headers: ${self:custom.allowedHeaders}
+          request:
+            parameters:
+              paths:
+                noteId: true
+           
+  deleteNote:
+    handler: handlers/notes.deleteNoteById
+    events:
+      - http:
+          path: notes/{noteId}
+          method: delete
+          cors: 
+            origins: '*'
+            headers: ${self:custom.allowedHeaders}
+          request:
+            parameters:
+              paths:
+                noteId: true
+  
+  authorize:
+    handler: handlers/notes.authorize
+    events:
+      - http:
+          path: auth
+          method: GET
+          cors: 
+            origins: '*'
+            headers: ${self:custom.allowedHeaders}
+
+resources:
+  Resources:
+    notesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.NOTES_TABLE}
+        KeySchema:
+          - AttributeName: noteId
+            KeyType: HASH
+          - AttributeName: userId
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: noteId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1     
+    
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType:  DEFAULT_4XX
+        RestApiId: 
+          Ref: 'ApiGatewayRestApi'

@@ -1,0 +1,22 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://example.com/product.schema.json",
+    "title": "Note",
+    "description": "to update note in notes",
+    "type": "object",
+    "properties": {
+        "title": {
+          "description": "The unique identifier for a title",
+          "type": "string"
+        },
+        "content": {
+          "description": "The unique identifier for a content",
+          "type": "string"
+        },
+        "date": {
+          "description": "The unique identifier for a date",
+          "type": "string"
+        }
+      },
+    "optional": ["title" , "content", "date"]
+  }
